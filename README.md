@@ -26,8 +26,10 @@ make demo-live PR=1        # review pull request #1 yourself, dry run, then gate
 Claude Code CLI (`REPOACH_PROVIDER=claude_code`, the default of `demo-live`)
 or an API key (see `repoach doctor`).
 
-Opening the repository in Codespaces or Gitpod installs repoach at the pinned
-commit, runs `repoach doctor`, and starts `make demo` in the first terminal.
+Opening the repository in Codespaces or Gitpod starts `make demo` in the first
+terminal as soon as the container is up (the replay needs only `python3`), and
+installs repoach at the pinned commit alongside it (about 2.5 minutes measured
+with pipx from the git commit), then runs `repoach doctor`.
 
 ## The 90-second script
 
