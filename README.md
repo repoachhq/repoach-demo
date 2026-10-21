@@ -31,18 +31,26 @@ commit, runs `repoach doctor`, and starts `make demo` in the first terminal.
 
 ## The 90-second script
 
-| Time | Step | What you see |
-|---|---|---|
-| 0:00 | 1. `repoach init` | every file reports `unchanged`: the repository is already set up |
-| 0:10 | 2. `gh pr create` | a pull request adds `search`, `page_count` and `dueTotal`, with the three defects |
-| 0:20 | 3. `repoach ci review --dry-run` | four reviewers; the team verdict and each finding with its refuter state |
-| 0:45 | 4. `repoach review gate` | refused, exit 5, the open blocking findings named |
-| 0:55 | 5. fix commit | the prefix is bound, the count rounds up, `dueTotal` gets a test |
-| 1:05 | 6. review and gate again | the gate passes, exit 0 |
-| 1:20 | 7. `gh pr close` | the demo branch is gone |
+`make demo` replays steps 1-4 of the run recorded on 2026-10-21 (pull request
+#6, opened and closed by `make demo DEMO_MODE=live`) in about 17 seconds.
 
-The last line of a run is `demo: 7/7 steps, rcs 0 0 0 5 0 0 0`; `make demo`
-exits 0 only when every step returned the code shown there.
+| Step | Command | Recorded |
+|---|---|---|
+| 1 | `repoach init` | every file `unchanged`: the repository is already set up |
+| 2 | `gh pr create` | the pull request adds `search`, `page_count` and `dueTotal`, with the three defects |
+| 3 | `repoach ci review --dry-run` | 85 s live: `REQUEST_CHANGES`; the SQL injection and the off-by-one verified by the refuter, two speculative findings refuted; the tester names `dueTotal` as untested |
+| 4 | `repoach review gate` | refused, exit 5: 5 open blocking findings, the spec's promised tests absent |
+| 5 | fix commit | the prefix is bound, the count rounds up, `dueTotal` gets a test |
+| 6 | review and gate again | all four reviewers `APPROVE`, the promised tests present, but the gate still refuses (exit 5) |
+| 7 | `gh pr close` | the demo branch is gone |
+
+The last line of `make demo` is `demo: 4/4 steps, rcs 0 0 0 5`, and it exits 0
+only when every step returned that code. Steps 5-7 are in the recording
+(`DEMO_UPTO=7 make demo` replays them): on repoach `f8915fc` a finding the
+refuter verified at an earlier head is re-verified only by repoach's own fix
+loop, so a fix pushed by a person leaves it blocking and step 6 ends with exit
+5 where the walkthrough expects 0. The replay stops at the gate until repoach
+re-judges those findings at the new head.
 
 ## Layout
 
