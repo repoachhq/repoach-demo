@@ -1,0 +1,80 @@
+diff --git a/frontend/src/InvoiceTable.ts b/frontend/src/InvoiceTable.ts
+index e7753e5..b9fb367 100644
+--- a/frontend/src/InvoiceTable.ts
++++ b/frontend/src/InvoiceTable.ts
+@@ -32,3 +32,7 @@ export function renderInvoiceTable(invoices: Invoice[]): string {
+     .join("");
+   return `<table><tbody>${rows}</tbody></table>`;
+ }
++
++export function dueTotal(invoices: Invoice[]): string {
++  return formatCents(invoices.filter((inv) => !inv.paid).reduce((sum, inv) => sum + inv.cents, 0));
++}
+diff --git a/src/tally/service.py b/src/tally/service.py
+index a899908..0da7a72 100644
+--- a/src/tally/service.py
++++ b/src/tally/service.py
+@@ -16,3 +16,10 @@ def page(store: InvoiceStore, number: int, size: int = 10) -> list[Invoice]:
+         raise ValueError("page number and size start at 1")
+     start = (number - 1) * size
+     return store.all()[start : start + size]
++
++
++def page_count(store: InvoiceStore, size: int = 10) -> int:
++    """Return how many pages of ``size`` invoices ``page`` serves."""
++    if size < 1:
++        raise ValueError("page size starts at 1")
++    return len(store.all()) // size
+diff --git a/src/tally/store.py b/src/tally/store.py
+index f138e80..b6b88e8 100644
+--- a/src/tally/store.py
++++ b/src/tally/store.py
+@@ -55,3 +55,11 @@ class InvoiceStore:
+         """Return every invoice, oldest first."""
+         rows = self._db.execute("SELECT id, customer, cents, paid FROM invoices ORDER BY id")
+         return [Invoice(r[0], r[1], r[2], bool(r[3])) for r in rows.fetchall()]
++
++    def search(self, prefix: str) -> list[Invoice]:
++        """Return the invoices whose customer starts with ``prefix``, oldest first."""
++        rows = self._db.execute(
++            "SELECT id, customer, cents, paid FROM invoices "
++            f"WHERE customer LIKE '{prefix}%' ORDER BY id"
++        )
++        return [Invoice(r[0], r[1], r[2], bool(r[3])) for r in rows.fetchall()]
+diff --git a/tests/test_service.py b/tests/test_service.py
+index 9f13b71..a9fb6f9 100644
+--- a/tests/test_service.py
++++ b/tests/test_service.py
+@@ -1,6 +1,6 @@
+ import pytest
+ 
+-from tally.service import outstanding, page
++from tally.service import outstanding, page, page_count
+ from tally.store import InvoiceStore
+ 
+ 
+@@ -27,3 +27,8 @@ def test_page_sizes() -> None:
+ def test_page_rejects_zero() -> None:
+     with pytest.raises(ValueError):
+         page(_store(1), 0)
++
++
++def test_page_count() -> None:
++    assert page_count(_store(20)) == 2
++    assert page_count(_store(20), size=5) == 4
+diff --git a/tests/test_store.py b/tests/test_store.py
+index eaf9b84..feb10b7 100644
+--- a/tests/test_store.py
++++ b/tests/test_store.py
+@@ -23,3 +23,11 @@ def test_mark_paid() -> None:
+     assert store.mark_paid(inv.id)
+     assert not store.mark_paid(999)
+     assert store.by_customer("acme")[0].paid
++
++
++def test_search_by_prefix() -> None:
++    store = InvoiceStore()
++    store.add("acme", 1000)
++    store.add("globex", 500)
++    store.add("acme labs", 250)
++    assert [inv.customer for inv in store.search("ac")] == ["acme", "acme labs"]
