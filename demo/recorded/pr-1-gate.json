@@ -1,0 +1,22 @@
+{
+  "pr_number": 1,
+  "outcome": "APPROVE",
+  "head_sha": "98a5a105827f6623b559f7c50fdd7a6ac1a4ed47",
+  "tree": "checkout",
+  "spec": "SP-TALLY-INVOICES",
+  "spec_source": "description",
+  "merge": false,
+  "reasons": [
+    "4 open blocking finding(s) at head",
+    "spec acceptance selectors not all present"
+  ],
+  "facts": {
+    "ci_green": true,
+    "open_blocking_findings": 4,
+    "spec_coverage": "not_covered",
+    "spec_covered": false,
+    "spec_coverage_known": true,
+    "review_complete": true,
+    "review_integrity_known": true
+  }
+}
