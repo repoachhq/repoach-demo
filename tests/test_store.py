@@ -23,3 +23,11 @@ def test_mark_paid() -> None:
     assert store.mark_paid(inv.id)
     assert not store.mark_paid(999)
     assert store.by_customer("acme")[0].paid
+
+
+def test_search_by_prefix() -> None:
+    store = InvoiceStore()
+    store.add("acme", 1000)
+    store.add("globex", 500)
+    store.add("acme labs", 250)
+    assert [inv.customer for inv in store.search("ac")] == ["acme", "acme labs"]
