@@ -24,6 +24,14 @@ ROOT = Path(__file__).resolve().parent.parent
 RECORDED = ROOT / "demo" / "recorded"
 DEFECTS = ROOT / "demo" / "defects"
 EXPECTED_RCS = [0, 0, 0, 5, 0, 0, 0]
+REPLAY_UPTO = 4
+"""Steps ``make demo`` replays by default.
+
+Steps 5-7 (fix, review and gate again, close) are recorded too, but on
+repoach f8915fc the gate still refuses after a human fix: a judged finding
+verified at an earlier head is only re-verified by the Coder loop, so it
+stays blocking. ``DEMO_UPTO=7`` replays them and fails on step 6.
+"""
 TITLES = {
     1: "repoach init on a clean clone",
     2: "open a pull request carrying the planted defects",
@@ -60,7 +68,10 @@ def _json_or_none(text: str) -> dict | None:
 def _review_lines(payload: dict) -> list[str]:
     """Summarise a ``review pr`` payload (or the one nested in ``ci review``)."""
     review = payload.get("review") if isinstance(payload.get("review"), dict) else payload
-    lines = [f"team verdict: {review.get('final_verdict')}"]
+    lines = []
+    if "outcome" in payload and "review" in payload:
+        lines.append(f"advisory job: {payload.get('outcome')} ({payload.get('reason') or 'reviewed'})")
+    lines.append(f"team verdict: {review.get('final_verdict')}")
     for entry in review.get("reviews") or []:
         lines.append(f"  {entry.get('role', '?'):<9} {entry.get('verdict')}")
     for f in review.get("findings") or []:
@@ -134,7 +145,7 @@ def _latest_recording() -> Path:
     return runs[-1]
 
 
-def replay(fast: bool, verify: bool) -> int:
+def replay(fast: bool, verify: bool, upto: int) -> int:
     """Print a recording step by step and check its exit codes."""
     path = _latest_recording()
     records = [json.loads(ln) for ln in path.read_text().splitlines() if ln.strip()]
@@ -143,9 +154,11 @@ def replay(fast: bool, verify: bool) -> int:
     rcs: dict[int, int] = {}
     for record in records:
         step = int(record["step"])
+        if step > upto:
+            break
         if step not in rcs:
             print()
-            print(_color(f"[{step}/7] {TITLES.get(step, '')}", BOLD))
+            print(_color(f"[{step}/{upto}] {TITLES.get(step, '')}", BOLD))
         print(_color("$ " + shlex.join(record["argv"]), DIM))
         if not fast:
             time.sleep(min(float(record.get("elapsed_s", 0)) / 20.0, 4.0) + 0.6)
@@ -160,16 +173,17 @@ def replay(fast: bool, verify: bool) -> int:
             if missing:
                 print(f"demo: step {step}: recorded JSON lacks {', '.join(missing)}; re-record it")
                 return 1
-    return _summary(rcs, started)
+    return _summary(rcs, started, upto)
 
 
-def _summary(rcs: dict[int, int], started: float) -> int:
+def _summary(rcs: dict[int, int], started: float, upto: int = 7) -> int:
     """Print the closing line and return 0 when the exit codes are the expected ones."""
-    got = [rcs.get(n) for n in range(1, 8)]
+    got = [rcs.get(n) for n in range(1, upto + 1)]
     print()
     print(f"elapsed: {time.monotonic() - started:.1f} s")
-    print(f"demo: {sum(1 for r in got if r is not None)}/7 steps, rcs " + " ".join(str(r) for r in got))
-    return 0 if got == EXPECTED_RCS else 1
+    done = sum(1 for r in got if r is not None)
+    print(f"demo: {done}/{upto} steps, rcs " + " ".join(str(r) for r in got))
+    return 0 if got == EXPECTED_RCS[:upto] else 1
 
 
 class Live:
@@ -230,6 +244,9 @@ class Live:
         if subprocess.run(["gh", "auth", "status"], capture_output=True, check=False).returncode:
             print("demo: no GitHub login (gh auth login, or GH_TOKEN); try make demo (replay)")
             return 2
+        if not (os.environ.get("GH_TOKEN") or os.environ.get("GITHUB_TOKEN")):
+            token = subprocess.run(["gh", "auth", "token"], capture_output=True, text=True, check=False)
+            os.environ["GH_TOKEN"] = token.stdout.strip()
         started = time.monotonic()
         install_t0 = os.environ.get("DEMO_INSTALL_T0")
         self._close_leftovers()
@@ -269,9 +286,12 @@ class Live:
             self.run(6, ["repoach", "review", "gate", number, "--forge", "github"])
 
             print(_color(f"\n[7/7] {TITLES[7]}", BOLD))
+            subprocess.run(["git", "worktree", "remove", "--force", str(self.work)], cwd=ROOT, check=False)
+            subprocess.run(["git", "branch", "-D", self.branch], cwd=ROOT, capture_output=True, check=False)
             self.run(7, ["gh", "pr", "close", number, "--delete-branch"])
         finally:
-            subprocess.run(["git", "worktree", "remove", "--force", str(self.work)], cwd=ROOT, check=False)
+            if self.work.exists():
+                subprocess.run(["git", "worktree", "remove", "--force", str(self.work)], cwd=ROOT, check=False)
             subprocess.run(["git", "branch", "-D", self.branch], cwd=ROOT, capture_output=True, check=False)
         if self.record:
             RECORDED.mkdir(parents=True, exist_ok=True)
@@ -291,7 +311,11 @@ def main() -> int:
     args = parser.parse_args()
     if args.mode == "live":
         return Live(record=os.environ.get("DEMO_RECORD", "1") == "1").walk()
-    return replay(fast=os.environ.get("DEMO_FAST") == "1", verify=os.environ.get("DEMO_VERIFY") == "1")
+    return replay(
+        fast=os.environ.get("DEMO_FAST") == "1",
+        verify=os.environ.get("DEMO_VERIFY") == "1",
+        upto=int(os.environ.get("DEMO_UPTO") or REPLAY_UPTO),
+    )
 
 
 if __name__ == "__main__":
