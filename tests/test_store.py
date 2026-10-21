@@ -31,3 +31,12 @@ def test_search_by_prefix() -> None:
     store.add("globex", 500)
     store.add("acme labs", 250)
     assert [inv.customer for inv in store.search("ac")] == ["acme", "acme labs"]
+
+
+def test_search_binds_the_prefix() -> None:
+    store = InvoiceStore()
+    store.add("acme", 1000)
+    store.add("a_b", 200)
+    assert store.search("x' OR '1'='1") == []
+    assert [inv.customer for inv in store.search("a_")] == ["a_b"]
+    assert len(store.search("")) == 2
