@@ -22,4 +22,4 @@ def page_count(store: InvoiceStore, size: int = 10) -> int:
     """Return how many pages of ``size`` invoices ``page`` serves."""
     if size < 1:
         raise ValueError("page size starts at 1")
-    return len(store.all()) // size
+    return -(-len(store.all()) // size)
