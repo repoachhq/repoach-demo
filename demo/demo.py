@@ -56,6 +56,12 @@ def _color(text: str, code: str) -> str:
     return f"{code}{text}{RESET}"
 
 
+def scrub(text: str) -> str:
+    """Drop debug log lines and replace local paths before a run is committed."""
+    kept = [ln for ln in text.splitlines(keepends=True) if "| DEBUG    |" not in ln]
+    return "".join(kept).replace(str(ROOT), ".").replace(str(Path.home()), "~")
+
+
 def _json_or_none(text: str) -> dict | None:
     """Parse a command's stdout as one JSON object, else None."""
     try:
@@ -74,13 +80,20 @@ def _review_lines(payload: dict) -> list[str]:
     lines.append(f"team verdict: {review.get('final_verdict')}")
     for entry in review.get("reviews") or []:
         lines.append(f"  {entry.get('role', '?'):<9} {entry.get('verdict')}")
-    for f in review.get("findings") or []:
-        state = (f.get("refutation") or {}).get("state", "?")
+        summary = " ".join((entry.get("summary") or "").split())
+        if summary:
+            lines.append(f"      {summary[:160]}")
+    findings = review.get("findings") or []
+    if findings:
+        lines.append(f"  {len(findings)} findings, each judged by the refuter:")
+    for f in findings:
+        refutation = f.get("refutation") or {}
         where = f.get("file") or f.get("path") or "?"
-        line = f.get("line")
-        loc = f"{where}:{line}" if line else where
-        title = f.get("title") or f.get("claim") or f.get("message") or ""
-        lines.append(f"  [{f.get('severity', '?')}] {loc} {title[:90]} ({state})")
+        loc = f"{where}:{f['line']}" if f.get("line") else where
+        lines.append(f"  [{f.get('claim_type', '?')}] {loc} {refutation.get('state', '?')}")
+        reason = (refutation.get("reason") or "").strip()
+        if reason:
+            lines.append(f"      {reason[:150]}")
     usage = review.get("usage") or {}
     total = usage.get("total") if isinstance(usage, dict) else None
     if isinstance(total, dict) and total.get("duration_s") is not None:
@@ -138,7 +151,7 @@ def _latest_recording() -> Path:
     """The recording replay plays: DEMO_RECORDING, else the newest one."""
     chosen = os.environ.get("DEMO_RECORDING")
     if chosen:
-        return Path(chosen)
+        return Path(chosen).resolve()
     runs = sorted(RECORDED.glob("*.jsonl"))
     if not runs:
         sys.exit("demo: no recording under demo/recorded/ (run make demo DEMO_MODE=live once)")
@@ -161,10 +174,12 @@ def replay(fast: bool, verify: bool, upto: int) -> int:
             print(_color(f"[{step}/{upto}] {TITLES.get(step, '')}", BOLD))
         print(_color("$ " + shlex.join(record["argv"]), DIM))
         if not fast:
-            time.sleep(min(float(record.get("elapsed_s", 0)) / 20.0, 4.0) + 0.6)
+            time.sleep(min(float(record.get("elapsed_s", 0)) / 4.0, 8.0) + 1.0)
         for line in _render(record):
             refused = line.startswith("gate: REFUSED") or "REQUEST_CHANGES" in line
-            print(_color(line, RED) if refused else line)
+            print(_color(line, RED) if refused else line, flush=True)
+            if not fast:
+                time.sleep(0.08)
         rc = int(record["rc"])
         print(_color(f"exit {rc}", GREEN if rc == 0 else RED))
         rcs[step] = rc
@@ -203,10 +218,10 @@ class Live:
         proc = subprocess.run(argv, cwd=cwd, capture_output=True, text=True, check=False)
         rec = {
             "step": step,
-            "argv": argv,
+            "argv": [scrub(a) for a in argv],
             "rc": proc.returncode,
-            "stdout": proc.stdout,
-            "stderr": proc.stderr,
+            "stdout": scrub(proc.stdout),
+            "stderr": scrub(proc.stderr),
             "elapsed_s": round(time.monotonic() - t0, 1),
         }
         if show:
