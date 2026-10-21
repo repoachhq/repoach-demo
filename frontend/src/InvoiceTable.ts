@@ -32,3 +32,7 @@ export function renderInvoiceTable(invoices: Invoice[]): string {
     .join("");
   return `<table><tbody>${rows}</tbody></table>`;
 }
+
+export function dueTotal(invoices: Invoice[]): string {
+  return formatCents(invoices.filter((inv) => !inv.paid).reduce((sum, inv) => sum + inv.cents, 0));
+}
