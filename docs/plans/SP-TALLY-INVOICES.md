@@ -24,7 +24,7 @@ Add `InvoiceStore.search`, `service.page_count` and `dueTotal`, each pinned by a
 - **Action**: Add `dueTotal(invoices)`, the formatted sum of the unpaid invoices.
 - **Commit**: `feat(frontend): total what is due`
 - **Done when**: `cd frontend && npx vitest run` passes.
-- **Unit tests**: `frontend/src/InvoiceTable.test.ts > dueTotal > sums the unpaid invoices only`
+- **Unit tests**: `frontend/src/InvoiceTable.test.ts::dueTotal::sums the unpaid invoices only`
 
 
 ## Integration tests
@@ -63,7 +63,7 @@ Add `InvoiceStore.search`, `service.page_count` and `dueTotal`, each pinned by a
       "action": "Add dueTotal(invoices), the formatted sum of the unpaid invoices.",
       "commit_message": "feat(frontend): total what is due",
       "done_when": "`cd frontend && npx vitest run` passes.",
-      "unit_tests": ["frontend/src/InvoiceTable.test.ts > dueTotal > sums the unpaid invoices only"]
+      "unit_tests": ["frontend/src/InvoiceTable.test.ts::dueTotal::sums the unpaid invoices only"]
     }
   ],
   "integration_tests": ["tests/integration/test_invoice_flow.py"]
