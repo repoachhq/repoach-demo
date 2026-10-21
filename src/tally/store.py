@@ -60,6 +60,7 @@ class InvoiceStore:
         """Return the invoices whose customer starts with ``prefix``, oldest first."""
         rows = self._db.execute(
             "SELECT id, customer, cents, paid FROM invoices "
-            f"WHERE customer LIKE '{prefix}%' ORDER BY id"
+            "WHERE substr(customer, 1, length(?)) = ? ORDER BY id",
+            (prefix, prefix),
         )
         return [Invoice(r[0], r[1], r[2], bool(r[3])) for r in rows.fetchall()]

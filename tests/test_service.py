@@ -32,3 +32,8 @@ def test_page_rejects_zero() -> None:
 def test_page_count() -> None:
     assert page_count(_store(20)) == 2
     assert page_count(_store(20), size=5) == 4
+
+
+def test_page_count_rounds_up() -> None:
+    assert page_count(_store(25)) == 3
+    assert page_count(_store(0)) == 0
