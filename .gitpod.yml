@@ -1,0 +1,12 @@
+image: gitpod/workspace-python-3.12
+tasks:
+  - name: repoach demo
+    init: |
+      date +%s > /tmp/demo-install-t0
+      pipx install 'repoach @ git+https://github.com/repoachhq/repoach@f8915fc9d4487b5339b816a397c74a40bdfcc5dc'
+      (cd frontend && npm ci --no-audit --no-fund)
+      repoach doctor || echo 'repoach doctor: no model provider here yet; make demo replays without one, make demo-live needs a Claude Code login'
+    command: make demo
+vscode:
+  extensions:
+    - ms-python.python

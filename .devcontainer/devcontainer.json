@@ -1,0 +1,16 @@
+{
+  "name": "repoach demo",
+  "image": "mcr.microsoft.com/devcontainers/python:1-3.12-bookworm",
+  "features": {
+    "ghcr.io/devcontainers/features/node:1": { "version": "22" },
+    "ghcr.io/devcontainers/features/github-cli:1": {}
+  },
+  "containerEnv": { "FORCE_COLOR": "1" },
+  "onCreateCommand": "date +%s > /tmp/demo-install-t0 && pipx install 'repoach @ git+https://github.com/repoachhq/repoach@f8915fc9d4487b5339b816a397c74a40bdfcc5dc' && (cd frontend && npm ci --no-audit --no-fund)",
+  "postCreateCommand": "repoach doctor || echo 'repoach doctor: no model provider here yet; make demo replays without one, make demo-live needs a Claude Code login'",
+  "postAttachCommand": "make demo",
+  "customizations": {
+    "codespaces": { "openFiles": ["README.md"] },
+    "vscode": { "extensions": ["ms-python.python", "vitest.explorer"] }
+  }
+}
