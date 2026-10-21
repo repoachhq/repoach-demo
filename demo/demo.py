@@ -27,10 +27,10 @@ EXPECTED_RCS = [0, 0, 0, 5, 0, 0, 0]
 REPLAY_UPTO = 7
 """Steps ``make demo`` replays by default: all seven.
 
-The recording of 2026-10-21 (pull request #9) was made with repoach
-carrying SP-GATE-REVERIFIES-AT-HEAD (repoachhq/repoach#232): at the fix
-head the gate re-verifies the findings of the planted head, resolves
-them, and passes. ``DEMO_UPTO=4`` stops at the first gate.
+The recording of 2026-10-22 (pull request #11) was made with repoach
+carrying SP-GATE-REVERIFIES-AT-HEAD 0.2: at the fix head the review
+re-verifies the findings of the planted head, resolves them and reports
+``APPROVE``, and the gate passes. ``DEMO_UPTO=4`` stops at the first gate.
 """
 TITLES = {
     1: "repoach init on a clean clone",
