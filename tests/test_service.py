@@ -1,6 +1,6 @@
 import pytest
 
-from tally.service import outstanding, page
+from tally.service import outstanding, page, page_count
 from tally.store import InvoiceStore
 
 
@@ -27,3 +27,8 @@ def test_page_sizes() -> None:
 def test_page_rejects_zero() -> None:
     with pytest.raises(ValueError):
         page(_store(1), 0)
+
+
+def test_page_count() -> None:
+    assert page_count(_store(20)) == 2
+    assert page_count(_store(20), size=5) == 4
