@@ -55,3 +55,11 @@ class InvoiceStore:
         """Return every invoice, oldest first."""
         rows = self._db.execute("SELECT id, customer, cents, paid FROM invoices ORDER BY id")
         return [Invoice(r[0], r[1], r[2], bool(r[3])) for r in rows.fetchall()]
+
+    def search(self, prefix: str) -> list[Invoice]:
+        """Return the invoices whose customer starts with ``prefix``, oldest first."""
+        rows = self._db.execute(
+            "SELECT id, customer, cents, paid FROM invoices "
+            f"WHERE customer LIKE '{prefix}%' ORDER BY id"
+        )
+        return [Invoice(r[0], r[1], r[2], bool(r[3])) for r in rows.fetchall()]
