@@ -24,13 +24,13 @@ ROOT = Path(__file__).resolve().parent.parent
 RECORDED = ROOT / "demo" / "recorded"
 DEFECTS = ROOT / "demo" / "defects"
 EXPECTED_RCS = [0, 0, 0, 5, 0, 0, 0]
-REPLAY_UPTO = 4
-"""Steps ``make demo`` replays by default.
+REPLAY_UPTO = 7
+"""Steps ``make demo`` replays by default: all seven.
 
-Steps 5-7 (fix, review and gate again, close) are recorded too, but on
-repoach f8915fc the gate still refuses after a human fix: a judged finding
-verified at an earlier head is only re-verified by the Coder loop, so it
-stays blocking. ``DEMO_UPTO=7`` replays them and fails on step 6.
+The recording of 2026-10-21 (pull request #9) was made with repoach
+carrying SP-GATE-REVERIFIES-AT-HEAD (repoachhq/repoach#232): at the fix
+head the gate re-verifies the findings of the planted head, resolves
+them, and passes. ``DEMO_UPTO=4`` stops at the first gate.
 """
 TITLES = {
     1: "repoach init on a clean clone",
